@@ -114,6 +114,12 @@ instance Identity B8.ByteString where
 -- | Call KISSmetrics' API.  See 'CallType' for documentation
 -- about which calls you may make.
 --
+-- KISSmetrics does not return errors even when an error occurs
+-- and there's absolutely no way of knowing if your request went
+-- through.  However, this function /may/ throw an exception if
+-- we fail to make the request to KISSmetrics (e.g. if there's a
+-- problem with your server's Internet connection).
+--
 -- Note that official KISSmetrics' APIs provide many functions
 -- (usually four) while we provide just this one and a sum data
 -- type.  This function alone does the work of @record@, @set@,
@@ -145,14 +151,10 @@ call manager apikey callType =
     -- Make the call
     H.Response {..} <- H.http request manager
 
-    -- By default http-conduit will already throw an exception on
-    -- anything other than 200 Ok, so we don't need to check the
-    -- response.  We consume it just to free the resources as early
-    -- as possible.  (If we just closed and KISSmetrics decided to
-    -- give an OK message in the body, the connection would not be
-    -- keep-alived correctly.)
+    -- KISSmetrics always returns 200 Ok with an invisible 1x1
+    -- GIF.  We need to consume the body in order to let the
+    -- connection be reused via keep-alive.
     responseBody C.$$ CL.sinkNull
-
 
 
 -- | Internal function.  Given a 'CallType', return the URL to be
