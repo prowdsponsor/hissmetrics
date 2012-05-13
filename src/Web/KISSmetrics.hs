@@ -134,6 +134,7 @@ call manager apikey callType =
           H.def { H.method = "GET"
                 , H.secure = True
                 , H.host   = "trk.kissmetrics.com"
+                , H.port   = 443
                 , H.path   = path
                 , H.queryString =
                     H.renderSimpleQuery False $
