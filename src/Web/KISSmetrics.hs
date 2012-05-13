@@ -12,6 +12,9 @@ module Web.KISSmetrics
       -- * Making calls
     , call
     , CallType(..)
+      -- * Type classes
+    , EventName(..)
+    , Identity(..)
     ) where
 
 import Control.Arrow (second)
@@ -52,11 +55,13 @@ data Timestamp =
     -- ^ Use given time as the timestamp.
 
 
-data CallType =
+-- | A type of call that may be made to KISSmetrics.  See also
+-- <http://support.kissmetrics.com/apis/specifications>.
+data CallType event ident =
     -- | Record an event.
-    Record { eventName :: SimpleText
+    Record { eventName :: event
              -- ^ Name of the event being recorded.
-           , identity :: SimpleText
+           , identity :: ident
              -- ^ Identity of the person doing the event.
            , timestamp :: Timestamp
              -- ^ See 'Timestamp'.
@@ -64,20 +69,46 @@ data CallType =
              -- ^ Any additional properties you may want.
            }
     -- | Set user properties without recording an event.
-  | SetProps { identity :: SimpleText
+  | SetProps { identity :: ident
                -- ^ Identity of the person whose properties will
-               -- to be changed.
+               -- be changed.
              , timestamp :: Timestamp
                -- ^ See 'Timestamp'.
              , properties :: [Property]
                -- ^ Properties to be set.
              }
     -- | Alias two identities as the same one.
-  | Alias { identity :: SimpleText
+  | Alias { identity :: ident
             -- ^ Identity of the person you're aliasing.
-          , identity' :: SimpleText
+          , identity' :: ident
             -- ^ Other identity you want to alias.
           }
+
+
+-- | Type class of data types that are event names.
+--
+-- You may just use 'SimpleText' (which is the only instance
+-- provided by default), but you may also create your own data
+-- type for event names and add an instance of this class.
+class EventName event where
+  fromEventName :: event -> SimpleText
+
+-- | This is the same as 'SimpleText'.
+instance EventName B8.ByteString where
+  fromEventName = id
+
+
+-- | Type class of data types that are user identities.
+--
+-- You may just use 'SimpleText' (which is the only instance
+-- provided by default), but you may also create your own data
+-- type for event names and add an instance of this class.
+class Identity ident where
+  fromIdentity :: ident -> SimpleText
+
+-- | This is the same as 'SimpleText'.
+instance Identity B8.ByteString where
+  fromIdentity = id
 
 
 -- | Call KISSmetrics' API.  See 'CallType' for documentation
@@ -90,9 +121,10 @@ data CallType =
 --
 -- TODO: Currently there's no support for automatically retrying
 -- failed request, you need to retry yourself.
-call :: H.Manager  -- ^ HTTP connection manager (cf. 'H.newManager').
-     -> APIKey     -- ^ Your KISSmetrics API key.
-     -> CallType   -- ^ Which call you would like to make.
+call :: (EventName event, Identity ident) =>
+        H.Manager            -- ^ HTTP connection manager (cf. 'H.newManager').
+     -> APIKey               -- ^ Your KISSmetrics API key.
+     -> CallType event ident -- ^ Which call you would like to make.
      -> IO ()
 call manager apikey callType =
   C.runResourceT $ do
@@ -124,23 +156,26 @@ call manager apikey callType =
 
 -- | Internal function.  Given a 'CallType', return the URL to be
 -- used and generate a list of arguments.
-callInfo :: CallType -> (H.Ascii, H.SimpleQuery)
+callInfo :: (EventName event, Identity ident) =>
+            CallType event ident -> (H.Ascii, H.SimpleQuery)
 callInfo Record {..} =
   ( "/e"
-  , (:) ("_n", eventName) $
-    (:) ("_p", identity) $
+  , (:) ("_n", fromEventName eventName) $
+    (:) ("_p", fromIdentity  identity)  $
     timestampInfo timestamp $
     propsInfo properties
   )
 callInfo SetProps {..} =
   ( "/s"
-  , (:) ("_p", identity) $
+  , (:) ("_p", fromIdentity identity) $
     timestampInfo timestamp $
     propsInfo properties
   )
 callInfo Alias {..} =
   ( "/a"
-  , [("_p", identity), ("_n", identity')]
+  , [ ("_p", fromIdentity identity)
+    , ("_n", fromIdentity identity')
+    ]
   )
 
 
