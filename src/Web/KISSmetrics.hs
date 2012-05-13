@@ -36,7 +36,7 @@ type SimpleText = H.Ascii
 
 
 -- | A KISSmetrics property.  The property names needs to follow
--- the rules outlined on 'SimpleText'@'s@ documentation.  The
+-- the rules outlined on 'SimpleText'@s@ documentation.  The
 -- property value, on the other hand, are only limited to 8 KiB
 -- and don't have any other restrictions.
 type Property = (SimpleText, Text)
