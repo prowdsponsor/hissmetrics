@@ -4,7 +4,12 @@
 -- import qualified Web.KISSmetrics as KISSmetrics
 -- @
 module Web.KISSmetrics
-    (
+    ( APIKey
+    , SimpleText
+    , Property
+    , Timestamp(..)
+    , CallType(..)
+    , call
     ) where
 
 import Control.Arrow (second)
