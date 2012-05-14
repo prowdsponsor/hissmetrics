@@ -32,5 +32,6 @@ Library
                  , http-types
                  , http-conduit == 1.4.*
   Extensions:
+    DeriveDataTypeable,
     RecordWildCards,
     OverloadedStrings

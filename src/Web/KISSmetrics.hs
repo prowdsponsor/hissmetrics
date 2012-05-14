@@ -20,6 +20,7 @@ module Web.KISSmetrics
 import Control.Arrow (second)
 import Data.Text (Text)
 import Data.Time (UTCTime, formatTime)
+import Data.Typeable (Typeable)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
@@ -53,6 +54,7 @@ data Timestamp =
     -- ^ Use KISSmetrics' servers time as the timestamp.
   | Manual UTCTime
     -- ^ Use given time as the timestamp.
+    deriving (Eq, Ord, Show, Read, Typeable)
 
 
 -- | A type of call that may be made to KISSmetrics.  See also
@@ -83,6 +85,7 @@ data CallType event ident =
           , identity' :: ident
             -- ^ Other identity you want to alias.
           }
+    deriving (Eq, Ord, Show, Read, Typeable)
 
 
 -- | Type class of data types that are event names.
