@@ -9,6 +9,7 @@ module Web.KISSmetrics
     , SimpleText
     , Property
     , Timestamp(..)
+    , generateTimestamp
       -- * Making calls
     , call
     , CallType(..)
@@ -17,9 +18,10 @@ module Web.KISSmetrics
     , Identity(..)
     ) where
 
+import Control.Applicative ((<$>))
 import Control.Arrow (second)
 import Data.Text (Text)
-import Data.Time (UTCTime, formatTime)
+import Data.Time (UTCTime, formatTime, getCurrentTime)
 import Data.Typeable (Typeable)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Conduit as C
@@ -52,8 +54,16 @@ data Timestamp =
     Automatic
     -- ^ Use KISSmetrics' servers time as the timestamp.
   | Manual UTCTime
-    -- ^ Use given time as the timestamp.
+    -- ^ Use given time as the timestamp.  If possible, use
+    -- 'Manual' since it allows you to safely resend events that
+    -- appear to have failed without being afraid of duplicates.
+    -- See also 'generateTimestamp'.
     deriving (Eq, Ord, Show, Read, Typeable)
+
+
+-- | Generate a 'Manual' timestamp with the current time.
+generateTimestamp :: IO Timestamp
+generateTimestamp = Manual <$> getCurrentTime
 
 
 -- | A type of call that may be made to KISSmetrics.  See also
