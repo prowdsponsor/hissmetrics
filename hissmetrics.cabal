@@ -35,3 +35,4 @@ Library
     DeriveDataTypeable,
     RecordWildCards,
     OverloadedStrings
+  GHC-options: -Wall
