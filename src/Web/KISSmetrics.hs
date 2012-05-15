@@ -66,35 +66,53 @@ generateTimestamp :: IO Timestamp
 generateTimestamp = Manual <$> getCurrentTime
 
 
--- | A type of call that may be made to KISSmetrics.  See also
--- <http://support.kissmetrics.com/apis/specifications>.
-data CallType event ident =
-    -- | Record an event.
-    Record { eventName :: event
-             -- ^ Name of the event being recorded.
-           , identity :: ident
-             -- ^ Identity of the person doing the event.
-           , timestamp :: Timestamp
-             -- ^ See 'Timestamp'.
-           , properties :: [Property]
-             -- ^ Any additional properties you may want.
-           }
-    -- | Set user properties without recording an event.
-  | SetProps { identity :: ident
-               -- ^ Identity of the person whose properties will
-               -- be changed.
-             , timestamp :: Timestamp
-               -- ^ See 'Timestamp'.
-             , properties :: [Property]
-               -- ^ Properties to be set.
-             }
-    -- | Alias two identities as the same one.
-  | Alias { identity :: ident
-            -- ^ Identity of the person you're aliasing.
-          , identity' :: ident
-            -- ^ Other identity you want to alias.
-          }
-    deriving (Eq, Ord, Show, Read, Typeable)
+-- | A type of call that may be made to KISSmetrics.  It's
+-- defined as a GADT where event names and identities are
+-- existential values.
+--
+-- Since Haddock currently has problems with GADTs, here's the
+-- documentation about each constructor:
+--
+--  ['Record'] Record an event.  'eventName' is the name of the
+--  event being recorded, 'identity' is the identity of the
+--  person doing the event and 'properties' are any other
+--  optional properties you may want.
+--
+--  ['SetProps'] Set user properties without recording an event.
+--  'identity' is the identity of the person whose properties
+--  will be changed and 'properties' are the properties to be
+--  set.
+--
+--  ['Alias'] Alias two identities ('identity' and 'identity'')
+--  as the same one.
+--
+-- See also <http://support.kissmetrics.com/apis/specifications>.
+data CallType where
+  Record
+    :: (EventName event, Identity ident) =>
+       { eventName :: event
+       , identity :: ident
+       , timestamp :: Timestamp
+       , properties :: [Property]
+       }
+    -> CallType
+  SetProps
+    :: Identity ident =>
+       { identity :: ident
+       , timestamp :: Timestamp
+       , properties :: [Property]
+       }
+    -> CallType
+  Alias
+    :: (Identity ident, Identity ident') =>
+       { identity :: ident
+       , identity' :: ident'
+       }
+    -> CallType
+  deriving (Typeable)
+
+-- Needs to use StandaloneDeriving since CallType is a GADT.
+deriving instance Show CallType
 
 
 -- | Type class of data types that are event names.
@@ -102,7 +120,7 @@ data CallType event ident =
 -- You may just use 'SimpleText' (which is the only instance
 -- provided by default), but you may also create your own data
 -- type for event names and add an instance of this class.
-class EventName event where
+class Show event => EventName event where
   fromEventName :: event -> SimpleText
 
 -- | This is the same as 'SimpleText'.
@@ -115,7 +133,7 @@ instance EventName B8.ByteString where
 -- You may just use 'SimpleText' (which is the only instance
 -- provided by default), but you may also create your own data
 -- type for event names and add an instance of this class.
-class Identity ident where
+class Show ident => Identity ident where
   fromIdentity :: ident -> SimpleText
 
 -- | This is the same as 'SimpleText'.
@@ -139,10 +157,9 @@ instance Identity B8.ByteString where
 --
 -- TODO: Currently there's no support for automatically retrying
 -- failed request, you need to retry yourself.
-call :: (EventName event, Identity ident) =>
-        H.Manager            -- ^ HTTP connection manager (cf. 'H.newManager').
-     -> APIKey               -- ^ Your KISSmetrics API key.
-     -> CallType event ident -- ^ Which call you would like to make.
+call :: H.Manager -- ^ HTTP connection manager (cf. 'H.newManager').
+     -> APIKey    -- ^ Your KISSmetrics API key.
+     -> CallType  -- ^ Which call you would like to make.
      -> IO ()
 call manager apikey callType =
   C.runResourceT $ do
@@ -171,8 +188,7 @@ call manager apikey callType =
 
 -- | Internal function.  Given a 'CallType', return the URL to be
 -- used and generate a list of arguments.
-callInfo :: (EventName event, Identity ident) =>
-            CallType event ident -> (H.Ascii, H.SimpleQuery)
+callInfo :: CallType -> (H.Ascii, H.SimpleQuery)
 callInfo Record {..} =
   ( "/e"
   , (:) ("_n", fromEventName eventName) $

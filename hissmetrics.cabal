@@ -34,5 +34,7 @@ Library
   Extensions:
     DeriveDataTypeable,
     RecordWildCards,
-    OverloadedStrings
+    OverloadedStrings,
+    GADTs,
+    StandaloneDeriving
   GHC-options: -Wall
