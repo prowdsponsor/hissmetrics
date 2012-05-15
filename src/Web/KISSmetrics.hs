@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 -- | This module is meant to be imported qualified:
 --
 -- @
@@ -68,33 +69,32 @@ generateTimestamp = Manual <$> getCurrentTime
 
 -- | A type of call that may be made to KISSmetrics.  See also
 -- <http://support.kissmetrics.com/apis/specifications>.
-data CallType event ident =
+data CallType event ident1 ident2 where
     -- | Record an event.
-    Record { eventName :: event
-             -- ^ Name of the event being recorded.
-           , identity :: ident
-             -- ^ Identity of the person doing the event.
-           , timestamp :: Timestamp
-             -- ^ See 'Timestamp'.
-           , properties :: [Property]
-             -- ^ Any additional properties you may want.
-           }
+    Record :: { eventName :: event
+                -- ^ Name of the event being recorded.
+              , recIdentity :: ident1
+                -- ^ Identity of the person doing the event.
+              , recTimestamp :: Timestamp
+                -- ^ See 'Timestamp'.
+              , recProperties :: [Property]
+                -- ^ Any additional properties you may want.
+              } -> CallType event ident1 SimpleText
     -- | Set user properties without recording an event.
-  | SetProps { identity :: ident
-               -- ^ Identity of the person whose properties will
-               -- be changed.
-             , timestamp :: Timestamp
-               -- ^ See 'Timestamp'.
-             , properties :: [Property]
-               -- ^ Properties to be set.
-             }
+    SetProps :: { setIdentity :: ident1
+                  -- ^ Identity of the person whose properties will
+                  -- be changed.
+                , setTimestamp :: Timestamp
+                  -- ^ See 'Timestamp'.
+                , setProperties :: [Property]
+                  -- ^ Properties to be set.
+                } -> CallType SimpleText ident1 SimpleText
     -- | Alias two identities as the same one.
-  | Alias { identity :: ident
-            -- ^ Identity of the person you're aliasing.
-          , identity' :: ident
-            -- ^ Other identity you want to alias.
-          }
-    deriving (Eq, Ord, Show, Read, Typeable)
+    Alias :: { identity :: ident1
+               -- ^ Identity of the person you're aliasing.
+             , identity' :: ident2
+               -- ^ Other identity you want to alias.
+             } -> CallType SimpleText ident1 ident2
 
 
 -- | Type class of data types that are event names.
@@ -139,10 +139,10 @@ instance Identity B8.ByteString where
 --
 -- TODO: Currently there's no support for automatically retrying
 -- failed request, you need to retry yourself.
-call :: (EventName event, Identity ident) =>
-        H.Manager            -- ^ HTTP connection manager (cf. 'H.newManager').
-     -> APIKey               -- ^ Your KISSmetrics API key.
-     -> CallType event ident -- ^ Which call you would like to make.
+call :: (EventName event, Identity ident1, Identity ident2) =>
+        H.Manager                    -- ^ HTTP connection manager (cf. 'H.newManager').
+     -> APIKey                       -- ^ Your KISSmetrics API key.
+     -> CallType event ident1 ident2 -- ^ Which call you would like to make.
      -> IO ()
 call manager apikey callType =
   C.runResourceT $ do
@@ -171,20 +171,20 @@ call manager apikey callType =
 
 -- | Internal function.  Given a 'CallType', return the URL to be
 -- used and generate a list of arguments.
-callInfo :: (EventName event, Identity ident) =>
-            CallType event ident -> (H.Ascii, H.SimpleQuery)
+callInfo :: (EventName event, Identity ident1, Identity ident2) =>
+            CallType event ident1 ident2 -> (H.Ascii, H.SimpleQuery)
 callInfo Record {..} =
   ( "/e"
   , (:) ("_n", fromEventName eventName) $
-    (:) ("_p", fromIdentity  identity)  $
-    timestampInfo timestamp $
-    propsInfo properties
+    (:) ("_p", fromIdentity  recIdentity)  $
+    timestampInfo recTimestamp $
+    propsInfo recProperties
   )
 callInfo SetProps {..} =
   ( "/s"
-  , (:) ("_p", fromIdentity identity) $
-    timestampInfo timestamp $
-    propsInfo properties
+  , (:) ("_p", fromIdentity setIdentity) $
+    timestampInfo setTimestamp $
+    propsInfo setProperties
   )
 callInfo Alias {..} =
   ( "/a"
