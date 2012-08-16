@@ -32,14 +32,14 @@ import qualified Network.HTTP.Types as H
 
 
 -- | Your KISSmetrics API key.
-type APIKey = H.Ascii
+type APIKey = B8.ByteString
 
 
 -- | KISSmetrics names and identities are limited to at most 255
 -- characters and all commas (@,@) and colons (@:@) are changed
 -- to spaces (@ @).  Nothing is checked by this Haskell library,
 -- so be careful =).
-type SimpleText = H.Ascii
+type SimpleText = B8.ByteString
 
 
 -- | A KISSmetrics property.  The property names needs to follow
@@ -183,12 +183,12 @@ call manager apikey callType =
     -- KISSmetrics always returns 200 Ok with an invisible 1x1
     -- GIF.  We need to consume the body in order to let the
     -- connection be reused via keep-alive.
-    responseBody C.$$ CL.sinkNull
+    responseBody C.$$+- CL.sinkNull
 
 
 -- | Internal function.  Given a 'CallType', return the URL to be
 -- used and generate a list of arguments.
-callInfo :: CallType -> (H.Ascii, H.SimpleQuery)
+callInfo :: CallType -> (B8.ByteString, H.SimpleQuery)
 callInfo Record {..} =
   ( "/e"
   , (:) ("_n", fromEventName eventName) $
