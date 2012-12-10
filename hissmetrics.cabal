@@ -30,7 +30,7 @@ Library
                  , text         >= 0.7     && < 0.12
                  , conduit      == 0.5.*
                  , http-types
-                 , http-conduit >= 1.5     && < 1.7
+                 , http-conduit >= 1.5
   Extensions:
     DeriveDataTypeable,
     RecordWildCards,
