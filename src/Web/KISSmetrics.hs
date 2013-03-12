@@ -178,12 +178,12 @@ call manager apikey callType =
                 }
 
     -- Make the call
-    H.Response {..} <- H.http request manager
+    r <- H.http request manager
 
     -- KISSmetrics always returns 200 Ok with an invisible 1x1
     -- GIF.  We need to consume the body in order to let the
     -- connection be reused via keep-alive.
-    responseBody C.$$+- CL.sinkNull
+    H.responseBody r C.$$+- CL.sinkNull
 
 
 -- | Internal function.  Given a 'CallType', return the URL to be
