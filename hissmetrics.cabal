@@ -1,7 +1,7 @@
 Name:                hissmetrics
-Version:             0.5
+Version:             0.5.1
 Synopsis:            Unofficial API bindings to KISSmetrics.
-Homepage:            https://github.com/meteficha/hissmetrics
+Homepage:            https://github.com/prowdsponsor/hissmetrics
 License:             BSD3
 License-file:        LICENSE
 Author:              Felipe Lessa
@@ -17,7 +17,7 @@ Description:
 
 Source-repository head
   type:     git
-  location: git://github.com/meteficha/hissmetrics.git
+  location: git://github.com/prowdsponsor/hissmetrics.git
 
 
 Library
